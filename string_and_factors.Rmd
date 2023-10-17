@@ -25,166 +25,98 @@ scale_color_discrete = scale_color_viridis_d
 scale_fill_discrete = scale_fill_viridis_d
 ```
 
+
 ```{r}
-weather_df = 
-  rnoaa::meteo_pull_monitors(
-    c("USW00094728", "USW00022534", "USS0023B17S"),
-    var = c("PRCP", "TMIN", "TMAX"), 
-    date_min = "2021-01-01",
-    date_max = "2022-12-31") |>
-  mutate(
-    name = recode(
-      id, 
-      USW00094728 = "CentralPark_NY", 
-      USW00022534 = "Molokai_HI",
-      USS0023B17S = "Waterhole_WA"),
-    tmin = tmin / 10,
-    tmax = tmax / 10,
-    month = lubridate::floor_date(date, unit = "month")) |>
-  select(name, id, everything())
+library(rvest)
+library(p8105.datasets)
 
 ```
 
-## "group_by"
+
+## Strings and manipulations
 
 ```{r}
-weather_df %>% 
-  group_by(name, month)  
-view(weather_df)
+
+string_vec = c("my", "name", "is", "vicky")
+
+str_detect(string_vec, "vicky")
+str_detect(string_vec, "y")
+str_detect(string_vec, "Vicky")
+
+str_replace(string_vec, "vicky", "Victoria Mello")
 ```
 
-## Counting things 
-
-count month observations:
 ```{r}
-weather_df %>% 
-  group_by(name, month) %>% 
-  summarize(n_obs = n())
-
-```
-
-we can use count()
-
-```{r}
-weather_df %>% 
-  count(name, month, name = "n_obs")
-```
-
-NEVER use base R and use table()
-
-## 2x2 tables 
-
-```{r}
-weather_df %>% 
-  filter(name != "Molokai_HI") %>% 
-  mutate(
-    cold = case_when(
-      tmax < 5 ~ "cold",
-      tmax >= 5 ~ "not_cold",
-      TRUE  ~ ""
-    )
-  ) %>% 
-  group_by(name, cold) %>% 
-  summarize(count = n())
- 
-```
-
-use tabyl(,) to create 2x2 tables 
-```{r}
-weather_df %>% 
-  filter(name != "Molokai_HI") %>% 
-  mutate(
-    cold = case_when(
-      tmax < 5 ~ "cold",
-      tmax >= 5 ~ "not_cold",
-      TRUE  ~ ""
-    )
-  ) %>% 
-  janitor::tabyl(name, cold)
-```
-
-
-## General summaries 
-
-You can do lots of summaries 
-
-```{r}
-weather_df %>% 
-  group_by(month) %>% 
-  summarize(
-    mean_tmax = mean(tmax, na.rm = TRUE),
-    mean_prcp = mean(prcp, na.rm = TRUE),
-    mean_tmin = mean(tmin, na.rm = TRUE),
+string_vec = c(
+  "i think we all rule for participating",
+  "i think i have been caught",
+  "i think this will be quite fun actually",
+  "it will be fun, i think"
   )
-```
 
-```{r}
-weather_df %>% 
-  group_by(month) %>% 
-  summarize(
-    mean_tmax = mean(tmax, na.rm = TRUE),
-    mean_prcp = mean(prcp, na.rm = TRUE),
-    mean_tmin = mean(tmin, na.rm = TRUE)
-  ) %>% 
-ggplot(aes(x = month, y = mean_tmax)) +
-  geom_point() + 
-  geom_line()
-```
-
-Suppose you want to summarize many columns -- Use summarize(across(:))
-
-```{r}
-weather_df %>% 
-  group_by(name, month) %>% 
-  summarize(across(prcp:tmin, mean))
-```
-
-Sometimes results are easier to read in another format
-
-```{r}
-weather_df %>% 
-    group_by(name, month) %>% 
-  summarize(mean_tmax = mean(tmax)) %>% 
-  pivot_wider(
-    names_from = name,
-    values_from = mean_tmax
-  ) %>% 
-  knitr::kable(digits = 1)
+str_detect(string_vec, "i think")
+str_detect(string_vec, "^i think")
+str_detect(string_vec, "i think$")
 
 ```
+the ^ = at the beginning and the $ = at the end 
 
-## 'group_by()' and 'mutate()'
-
-```{r}
-weather_df %>% 
-  group_by(name) %>% 
-  mutate(
-    mean_tmax = mean(tmax, na.rm = TRUE),
-    centered_tmax = tmax - mean_tmax
-  ) %>% 
-  ggplot(aes(x = date, y = centered_tmax, color = name)) +
-  geom_point()
-```
-
-What about window functions? 
-
-ranking...
-```{r}
-weather_df %>% 
-  group_by(name, month) %>% 
-  mutate(temp_rank = min_rank(tmax)) %>% 
-  filter(temp_rank == 1)
-```
-
-lag
 
 ```{r}
-weather_df %>% 
-    group_by(name) %>% 
-  mutate(temp_change = tmax - lag(tmax)) %>% 
-  summarize(
-    temp_change_max = max(temp_change, na.rm = TRUE),
-    temp_change_sd = sd(temp_change, na.rm = TRUE)
+string_vec = c(
+  "Time for a Pumpkin Spice Latte!",
+  "went to the #pumpkinpatch last weekend",
+  "Pumpkin Pie is obviously the best pie",
+  "SMASHING PUMPKINS -- LIVE IN CONCERT!!"
   )
+
+str_detect(string_vec,"Pumpkin")
+
+str_detect(string_vec,"[Pp]umpkin")
+```
+the [Pp] is how you make it look for both upper and lowercase 
+
+```{r}
+string_vec = c(
+  '7th inning stretch',
+  '1st half soon to begin. Texas won the toss.',
+  'she is 5 feet 4 inches tall',
+  '3AM - cant sleep :('
+  )
+
+str_detect(string_vec, "[0-9]")
+str_detect(string_vec, "^[0-9]")
+str_detect(string_vec, "^[0-9][a-z]")
+
+```
+
+```{r}
+string_vec = c(
+  'Its 7:11 in the evening',
+  'want to go to 7-11?',
+  'my flight is AA711',
+  'NetBios: scanning ip 203.167.114.66'
+  )
+
+str_detect(string_vec, "7.11")
+```
+the . allows you to look for 711 separated by ANY SYMBOL (but not if theres no symbol)
+
+
+```{r}
+string_vec = c(
+  'The CI is [2, 5]',
+  ':-]',
+  ':-[',
+  'I found the answer on pages [6-7]'
+  )
+
+str_detect(string_vec, "\\[")
+```
+indicate that the thing you are looking for is a 'special character' with a double backslash \\
+
+
+```{r}
+
 ```
 
