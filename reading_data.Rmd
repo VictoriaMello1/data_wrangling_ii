@@ -52,3 +52,61 @@ table_marj =
 table_marj
 ```
 
+## Star wars movie info 
+
+i want the data from here: https://www.imdb.com/list/ls070150896/
+
+```{r}
+swm_html = 
+  read_html("https://www.imdb.com/list/ls070150896/")
+
+```
+
+First - need to grab the elements I want 
+```{r}
+title_vec = 
+  swm_html |>
+  html_elements(".lister-item-header a") |>
+  html_text()
+
+gross_rev_vec = 
+  swm_html |>
+  html_elements(".text-small:nth-child(7) span:nth-child(5)") |>
+  html_text()
+
+runtime_vec = 
+  swm_html |>
+  html_elements(".runtime") |>
+  html_text()
+
+swm_df = 
+  tibble(
+    title = title_vec,
+    rev = gross_rev_vec,
+    runtime = runtime_vec)
+```
+
+## Using API keys 
+
+```{r}
+nyc_water = 
+  GET("https://data.cityofnewyork.us/resource/ia2d-e54m.csv") |> 
+  content("parsed")
+```
+
+```{r}
+nyc_water = 
+  GET("https://data.cityofnewyork.us/resource/ia2d-e54m.json") |> 
+  content("text") |>
+  jsonlite::fromJSON() |>
+  as_tibble()
+```
+
+
+```{r}
+brfss_smart2010 = 
+  GET("https://chronicdata.cdc.gov/resource/acme-vg9e.csv",
+      query = list("$limit" = 5000)) |> 
+  content("parsed")
+```
+
