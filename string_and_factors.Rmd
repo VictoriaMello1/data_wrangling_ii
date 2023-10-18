@@ -116,7 +116,100 @@ str_detect(string_vec, "\\[")
 indicate that the thing you are looking for is a 'special character' with a double backslash \\
 
 
+## Factors 
+
 ```{r}
+vec_sex = c("male", "male", "female", "female")
+vec_sex
+
+as.numeric(vec_sex)
+
+vec_sex = fct_relevel(vec_sex, "male")
+vec_sex
+
+as.numeric(vec_sex)
 
 ```
 
+
+## NSDUH 
+
+```{r}
+nsduh_url = "https://samhda.s3-us-gov-west-1.amazonaws.com/s3fs-public/field-uploads/2k15StateFiles/NSDUHsaeShortTermCHG2015.htm" 
+
+table_marj = 
+  read_html(nsduh_url) %>% 
+  html_table() %>% 
+  first() %>% 
+  slice(-1)
+```
+
+--> This is not a tidy dataset! We need to tidy this data imported from web before working w it...
+
+```{r}
+marj_df = 
+  table_marj %>% 
+  select(-contains("P Value")) %>% 
+  pivot_longer(
+      -State,
+      names_to = "age_year",
+      values_to = "percent"
+  ) %>% 
+  separate(age_year, into = c("age", "year"), "\\(") %>% 
+   mutate(
+    year = str_replace(year, "\\)", ""),
+    percent = str_replace(percent, "[a-c]$", ""),
+    percent = as.numeric(percent)) %>% 
+  filter(!(State %in% c("Total U.S.", "Northeast", "Midwest", "South", "West")))
+
+marj_df |>
+  filter(age == "12-17") |> 
+  mutate(State = fct_reorder(State, percent)) |> 
+  ggplot(aes(x = State, y = percent, color = year)) + 
+    geom_point() + 
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+```
+
+
+## NYC Resturant Inspections dataset 
+
+```{r}
+data("rest_inspec")
+rest_inspec
+```
+
+```{r}
+rest_inspec |> 
+  group_by(boro, grade) |> 
+  summarize(n = n()) |> 
+  pivot_wider(names_from = grade, values_from = n)
+```
+
+```{r}
+rest_inspec =
+  rest_inspec |>
+  filter(grade %in% c("A", "B", "C"), boro != "Missing") |> 
+  mutate(boro = str_to_title(boro))
+```
+
+
+Lets look at Pizza Places:
+
+```{r}
+rest_inspec %>% 
+  filter(str_detect(dba, "PIZZA")) %>% 
+  count(boro)
+
+```
+
+```{r}
+rest_inspec %>% 
+  filter(str_detect(dba, "PIZZA")) %>% 
+  mutate(boro = fct_infreq(boro)) %>% 
+  ggplot(aes(x = boro, fill = grade)) + 
+  geom_bar()
+
+```
+--> Jeff likes fct_reoder bc it says that you want the average for the numeric variable to be the order they are in 
+** IF you wanted to do something like rename Manhattan "The City" you would use fct_recode(boro, "The City" = Manhattan))
